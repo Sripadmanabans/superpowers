@@ -1,0 +1,39 @@
+skills/finishing-a-development-branch/SKILL.md|# git push origin HEAD:refs/heads/<new-branch>
+skills/finishing-a-development-branch/SKILL.md|git -C "$WORKTREE_PATH" status --porcelain -uall
+skills/finishing-a-development-branch/SKILL.md|git branch -d <feature-branch>
+skills/finishing-a-development-branch/SKILL.md|git branch -D <feature-branch>
+skills/finishing-a-development-branch/SKILL.md|git checkout <base-branch>
+skills/finishing-a-development-branch/SKILL.md|git merge <feature-branch>
+skills/finishing-a-development-branch/SKILL.md|git pull
+skills/finishing-a-development-branch/SKILL.md|git push -u origin <feature-branch>
+skills/finishing-a-development-branch/SKILL.md|git worktree prune # Self-healing: clean up any stale registrations
+skills/finishing-a-development-branch/SKILL.md|git worktree remove "$WORKTREE_PATH"
+skills/finishing-a-development-branch/SKILL.md|GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+skills/finishing-a-development-branch/SKILL.md|GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
+skills/finishing-a-development-branch/SKILL.md|MAIN_ROOT=$(git -C "$(git rev-parse --git-common-dir)/.." rev-parse --show-toplevel)
+skills/finishing-a-development-branch/SKILL.md|WORKTREE_PATH=$(git rev-parse --show-toplevel)
+skills/requesting-code-review/code-reviewer.md|git diff --stat [BASE_SHA]..[HEAD_SHA]
+skills/requesting-code-review/code-reviewer.md|git diff [BASE_SHA]..[HEAD_SHA]
+skills/requesting-code-review/SKILL.md|BASE_SHA=$(git rev-parse HEAD~1) # or origin/main
+skills/requesting-code-review/SKILL.md|HEAD_SHA=$(git rev-parse HEAD)
+skills/subagent-driven-development/scripts/review-package|commits=$(git rev-list --count "${base}..${head}")
+skills/subagent-driven-development/scripts/review-package|git diff --stat "${base}..${head}"
+skills/subagent-driven-development/scripts/review-package|git diff -U10 "${base}..${head}"
+skills/subagent-driven-development/scripts/review-package|git log --oneline "${base}..${head}"
+skills/subagent-driven-development/scripts/review-package|git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
+skills/subagent-driven-development/scripts/review-package|git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
+skills/subagent-driven-development/scripts/review-package|out="$dir/review-$(git rev-parse --short "$base")..$(git rev-parse --short "$head").diff"
+skills/subagent-driven-development/scripts/sdd-workspace|# `git status` and out of accidental commits without modifying any tracked file.
+skills/subagent-driven-development/scripts/sdd-workspace|root=$(git rev-parse --show-toplevel)
+skills/systematic-debugging/root-cause-tracing.md|npm test 2>&1 | grep 'DEBUG git init'
+skills/using-git-worktrees/SKILL.md|BRANCH=$(git branch --show-current)
+skills/using-git-worktrees/SKILL.md|git check-ignore -q .worktrees 2>/dev/null || git check-ignore -q worktrees 2>/dev/null
+skills/using-git-worktrees/SKILL.md|git rev-parse --show-superproject-working-tree 2>/dev/null
+skills/using-git-worktrees/SKILL.md|git worktree add "$path" -b "$BRANCH_NAME"
+skills/using-git-worktrees/SKILL.md|GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+skills/using-git-worktrees/SKILL.md|GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
+skills/using-superpowers/references/codex-tools.md|BRANCH=$(git branch --show-current)
+skills/using-superpowers/references/codex-tools.md|GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
+skills/using-superpowers/references/codex-tools.md|GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
+skills/writing-plans/SKILL.md|git add tests/path/test.py src/path/file.py
+skills/writing-plans/SKILL.md|git commit -m "feat: add specific feature"
