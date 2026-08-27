@@ -18,11 +18,12 @@
 # legacy workspace adopts instead of detecting; acceptable, marker-less
 # workspaces age out as plans finish.
 #
-# The workspace lives in the working tree (not under .git/) because Claude Code
-# treats .git/ as a protected path and denies agent writes there — which blocks
-# an implementer subagent from writing its report file. A self-ignoring
-# .gitignore at .superpowers/sdd/ keeps every plan's workspace out of
-# `git status` and out of accidental commits without modifying any tracked file.
+# The workspace lives in the working tree (not under .jj/ or .git/) because
+# Claude Code treats VCS metadata directories as protected paths and denies
+# agent writes there — which blocks an implementer subagent from writing its
+# report file. A self-ignoring .gitignore at .superpowers/sdd/ (jj honors
+# .gitignore) keeps every plan's workspace out of
+# `jj status` and out of accidental commits without modifying any tracked file.
 #
 # Single source of truth for the workspace location, so task-brief and
 # review-package cannot drift to different directories.
@@ -43,9 +44,9 @@ slug=$(basename "$plan" .md)
   || { echo "cannot derive a workspace name from: $plan" >&2; exit 2; }
 
 # Physical path, spelled the way pwd -P spells the plan path below: on Git
-# Bash, rev-parse prints C:/Users/... while pwd prints /c/Users/..., and the
+# Bash, jj root prints C:/Users/... while pwd prints /c/Users/..., and the
 # repo-relative marker check needs both in the same form.
-root=$(CDPATH='' cd -- "$(git rev-parse --show-toplevel)" && pwd -P)
+root=$(CDPATH='' cd -- "$(jj root)" && pwd -P)
 base="$root/.superpowers/sdd"
 
 # Normalize the plan path (physical directory, so relative/absolute/../
