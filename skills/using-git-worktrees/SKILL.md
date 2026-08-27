@@ -1,15 +1,23 @@
 ---
 name: using-git-worktrees
-description: Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or git worktree fallback
+description: Use when starting feature work that needs isolation from current workspace or before executing implementation plans - ensures an isolated workspace exists via native tools or a jj workspace fallback
 ---
 
-# Using Git Worktrees
+# Using Isolated Workspaces
 
 ## Overview
 
-Ensure work happens in an isolated workspace. Prefer your platform's native worktree tools. Fall back to manual git worktrees only when no native tool is available.
+Ensure work happens in an isolated workspace. Prefer your platform's native
+workspace tools. Fall back to creating a jj workspace by hand only when no
+native tool is available.
 
-**Core principle:** Detect existing isolation first. Then use native tools. Then fall back to git. Never fight the harness.
+**Core principle:** Detect existing isolation first. Then use native tools. Then
+fall back to `jj workspace add`. Never fight the harness.
+
+**This repository uses Jujutsu (jj).** Do not run `git` commands. In a
+jj workspace there is no `.git` directory at all, so git does not fail
+informatively — it reports "not a git repository" and any shell variable you
+captured from it is silently empty.
 
 **Announce at start:** "I'm using the using-git-worktrees skill to set up an isolated workspace."
 
@@ -18,86 +26,123 @@ Ensure work happens in an isolated workspace. Prefer your platform's native work
 **Before creating anything, check if you are already in an isolated workspace.**
 
 ```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
-BRANCH=$(git branch --show-current)
+ROOT=$(jj root)
+WORKSPACE=$(jj workspace list | awk '$2=="." {sub(/:$/,"",$1); print $1}')
 ```
 
-**Submodule guard:** `GIT_DIR != GIT_COMMON` is also true inside git submodules. Before concluding "already in a worktree," verify you are not in a submodule:
+`jj workspace list` marks the workspace you are standing in with `.` as its
+path, so `$WORKSPACE` is the name of the current workspace.
 
-```bash
-# If this returns a path, you're in a submodule, not a worktree — treat as normal repo
-git rev-parse --show-superproject-working-tree 2>/dev/null
+**If `$WORKSPACE` is not `default`:** You are already in a secondary workspace.
+Skip to Step 2 (Project Setup). Do NOT create another workspace.
+
+Report with change state:
+
+```
+Already in isolated workspace '<name>' at <root>.
 ```
 
-**If `GIT_DIR != GIT_COMMON` (and not a submodule):** You are already in a linked worktree. Skip to Step 2 (Project Setup). Do NOT create another worktree.
+**If `$WORKSPACE` is `default`:** You are in the primary workspace.
 
-Report with branch state:
-- On a branch: "Already in isolated workspace at `<path>` on branch `<name>`."
-- Detached HEAD: "Already in isolated workspace at `<path>` (detached HEAD, externally managed). Branch creation needed at finish time."
+Has the user already indicated their workspace preference in your instructions?
+If not, ask for consent before creating one:
 
-**If `GIT_DIR == GIT_COMMON` (or in a submodule):** You are in a normal repo checkout.
+> "Would you like me to set up an isolated workspace? It keeps this work off your current working copy."
 
-Has the user already indicated their worktree preference in your instructions? If not, ask for consent before creating a worktree:
+Honor any existing declared preference without asking. If the user declines
+consent, work in place and skip to Step 2.
 
-> "Would you like me to set up an isolated worktree? It protects your current branch from changes."
+**No submodule guard is needed.** jj has no submodules, so the ambiguity that
+forces one in git does not arise. `jj workspace list` is unambiguous.
 
-Honor any existing declared preference without asking. If the user declines consent, work in place and skip to Step 2.
+**No detached-HEAD case exists either.** Every jj change is a first-class
+commit that needs no bookmark to hold it, so there is no degraded state to
+detect here and no branch to create up front. Which bookmark should point at
+the finished work is a question for finish time, not setup time.
 
 ## Step 1: Create Isolated Workspace
 
 **You have two mechanisms. Try them in this order.**
 
-### 1a. Native Worktree Tools (preferred)
+### 1a. Native Workspace Tools (preferred)
 
-The user has asked for an isolated workspace (Step 0 consent). Do you already have a way to create a worktree? It might be a tool with a name like `EnterWorktree`, `WorktreeCreate`, a `/worktree` command, or a `--worktree` flag. If you do, use it and skip to Step 2.
+The user has asked for an isolated workspace (Step 0 consent). Do you already
+have a way to create one? It might be a tool with a name like `EnterWorktree`,
+`WorktreeCreate`, a `/worktree` command, or a `--worktree` flag. If you do, use
+it and skip to Step 2.
 
-Native tools handle directory placement, branch creation, and cleanup automatically. Using `git worktree add` when you have a native tool creates phantom state your harness can't see or manage.
+Native tools handle directory placement, change creation, and cleanup
+automatically. Running `jj workspace add` when you have a native tool creates
+phantom state your harness can't see or manage — and on a harness that
+translates its worktree hooks to jj, it also bypasses the placement policy that
+keeps workspaces out of the repository.
 
-Only proceed to Step 1b if you have no native worktree tool available.
+Only proceed to Step 1b if you have no native workspace tool available.
 
-### 1b. Git Worktree Fallback
+### 1b. jj Workspace Fallback
 
-**Only use this if Step 1a does not apply** — you have no native worktree tool available. Create a worktree manually using git.
+**Only use this if Step 1a does not apply** — you have no native workspace tool.
 
 #### Directory Selection
 
-Follow this priority order. Explicit user preference always beats observed filesystem state.
+Follow this priority order. Explicit user preference always beats observed
+filesystem state.
 
-1. **Check your instructions for a declared worktree directory preference.** If the user has already specified one, use it without asking.
+1. **Check your instructions for a declared workspace directory preference.**
+   If the user has already specified one, use it without asking.
 
-2. **Check for an existing project-local worktree directory:**
+2. **Check for an existing project-local workspace directory:**
    ```bash
    ls -d .worktrees 2>/dev/null     # Preferred (hidden)
    ls -d worktrees 2>/dev/null      # Alternative
    ```
    If found, use it. If both exist, `.worktrees` wins.
 
-3. **If there is no other guidance available**, default to `.worktrees/` at the project root.
+3. **If there is no other guidance available**, default to a **sibling of the
+   repository**: `../<repo-name>-<workspace-name>`.
+
+The sibling default is deliberate and is where jj differs from git. jj snapshots
+the working copy automatically on every command — there is no staging step to
+forget. A workspace nested inside the repository is therefore absorbed into the
+primary workspace's next snapshot unless it is ignored, and unlike git that
+happens with no `add` on anyone's part. Placing workspaces outside the
+repository removes the hazard rather than managing it.
 
 #### Safety Verification (project-local directories only)
 
-**MUST verify directory is ignored before creating worktree:**
+**Only needed if steps 1 or 2 above chose a directory inside the repository.**
+A sibling directory needs no ignore rule.
 
 ```bash
-git check-ignore -q .worktrees 2>/dev/null || git check-ignore -q worktrees 2>/dev/null
+grep -qE '^\.?worktrees/?$' .gitignore
 ```
 
-**If NOT ignored:** Add to .gitignore, commit the change, then proceed.
+jj honors `.gitignore`, so this is the check either way.
 
-**Why critical:** Prevents accidentally committing worktree contents to repository.
+**If NOT ignored:** Add it to `.gitignore` and describe that change before
+creating the workspace.
 
-#### Create the Worktree
+**Why critical:** an unignored nested workspace is swallowed by the parent
+workspace's automatic snapshot.
+
+#### Create the Workspace
 
 ```bash
-# Determine path based on chosen location
-path="$LOCATION/$BRANCH_NAME"
+name="<workspace-name>"
+path="$LOCATION/$name"
 
-git worktree add "$path" -b "$BRANCH_NAME"
+jj workspace add --name "$name" "$path"
 cd "$path"
 ```
 
-**Sandbox fallback:** If `git worktree add` fails with a permission error (sandbox denial), tell the user the sandbox blocked worktree creation and you're working in the current directory instead. Then run setup and baseline tests in place.
+`jj workspace add` creates the workspace with a fresh empty change on top of the
+current workspace's parent. Do **not** follow it with `jj new` — that stacks a
+second empty change for no reason.
+
+**Sandbox fallback:** If `jj workspace add` fails with a permission error
+(sandbox denial), tell the user the sandbox blocked workspace creation and
+you're working in the current directory instead. Then run setup and baseline
+tests in place.
 
 ## Step 2: Project Setup
 
@@ -134,7 +179,7 @@ npm test / cargo test / pytest / go test ./...
 ### Report
 
 ```
-Worktree ready at <full-path>
+Workspace ready at <full-path>
 Tests passing (<N> tests, 0 failures)
 Ready to implement <feature-name>
 ```
@@ -143,15 +188,14 @@ Ready to implement <feature-name>
 
 | Situation | Action |
 |-----------|--------|
-| Already in linked worktree | Skip creation (Step 0) |
-| In a submodule | Treat as normal repo (Step 0 guard) |
-| Native worktree tool available | Use it (Step 1a) |
-| No native tool | Git worktree fallback (Step 1b) |
+| `jj workspace list` marks a non-`default` workspace | Skip creation (Step 0) |
+| Native workspace tool available | Use it (Step 1a) |
+| No native tool | `jj workspace add` fallback (Step 1b) |
 | `.worktrees/` exists | Use it (verify ignored) |
 | `worktrees/` exists | Use it (verify ignored) |
 | Both exist | Use `.worktrees/` |
-| Neither exists | Check instruction file, then default `.worktrees/` |
-| Directory not ignored | Add to .gitignore + commit |
+| Neither exists | Check instruction file, then default to a sibling directory |
+| Nested directory not ignored | Add to `.gitignore` before creating |
 | Permission error on create | Sandbox fallback, work in place |
 | Tests fail during baseline | Report failures + ask |
 | No package.json/Cargo.toml | Skip dependency install |
@@ -160,8 +204,9 @@ Ready to implement <feature-name>
 
 | Excuse | Reality |
 |--------|---------|
-| "I'm obviously not in a worktree — no need to check" | Run Step 0. Harness-created isolation and submodules both fool eyeballing; the detection commands settle it. |
-| "`git worktree add` is quicker than hunting for a native tool" | A native tool (e.g. `EnterWorktree`) owns placement, branching, and cleanup. Bypassing it is the #1 mistake — it creates phantom state your harness can't see or manage. |
-| "The worktree directory is surely ignored already" | Run `git check-ignore`. An unignored worktree directory commits the whole tree into the repo. |
-| "Any directory name works" | Explicit instructions beat an existing project-local directory, which beats the `.worktrees/` default. |
+| "I'm obviously not in a workspace — no need to check" | Run Step 0. Harness-created isolation fools eyeballing; `jj workspace list` settles it. |
+| "`jj workspace add` is quicker than hunting for a native tool" | A native tool (e.g. `EnterWorktree`) owns placement, change creation, and cleanup. Bypassing it is the #1 mistake — it creates phantom state your harness can't see or manage. |
+| "git commands still work, this repo has a `.git`" | Only in the primary workspace of a colocated repo, and even there `git branch --show-current` is empty because jj keeps git detached. A secondary workspace has no `.git` at all, so git reports "not a git repository" and every variable you captured from it is empty — which reads as a passing check, not a failing one. |
+| "The workspace directory is surely ignored already" | Check before creating. jj snapshots automatically, so an unignored nested workspace is absorbed with no `add` on anyone's part. |
+| "Any directory name works" | Explicit instructions beat an existing project-local directory, which beats the sibling default. |
 | "The workspace is fresh — baseline tests can wait" | A dirty baseline makes every later failure ambiguous. Run the tests now; proceeding past failures is your human partner's call. |
