@@ -1,0 +1,15 @@
+# Allowlist for test-jj-purity.sh
+#
+# Format:  <path relative to repo root>|<substring of the offending line>|<reason>
+#
+# Every field is required. An entry with an empty reason is ignored by the
+# checker and the line goes back to failing -- appending a bare path to silence
+# a red build should not work, because in six months that will be the most
+# tempting thing to do.
+#
+# Matching is on file + substring, never line number: an upstream reflow keeps
+# passing, while an upstream edit to the command itself correctly re-opens the
+# question. Keep this file short. A growing allowlist means the fork is drifting
+# back toward git, which is the exact thing the check exists to prevent.
+
+skills/systematic-debugging/root-cause-tracing.md|grep 'DEBUG git init'|Narrative, not instruction: a worked example about a bug where git init fired in the wrong directory. The string is log-grep text for that story, and the story is about tracing root causes rather than about version control.

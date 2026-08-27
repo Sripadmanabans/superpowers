@@ -1,0 +1,77 @@
+# This file has no upstream counterpart -- obra/superpowers ships no
+# .github/workflows/ at all -- so it can never conflict when rebasing this
+# fork onto a new upstream release.
+name: jj purity
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # Mondays, off the hour: GitHub sheds load from on-the-hour cron spikes.
+    - cron: '17 13 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # Does THIS fork still convert everything it claims to?
+  purity:
+    name: fork is jj-pure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./tests/claude-code/test-jj-purity.sh
+
+  # Has UPSTREAM added git commands we have not accounted for?
+  #
+  # This deliberately does not run the purity check against upstream -- upstream
+  # is git by design, so that would be red forever and stop being read. Instead
+  # it diffs upstream's current git-command inventory against the baseline
+  # recorded in this fork, so only genuinely NEW commands surface. That makes it
+  # a leading indicator: it fires before the rebase, not after.
+  upstream-drift:
+    name: upstream added no new git commands
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out upstream
+        uses: actions/checkout@v4
+        with:
+          repository: obra/superpowers
+          path: .upstream
+          fetch-depth: 1
+
+      - name: Compare upstream inventory against recorded baseline
+        run: |
+          set -uo pipefail
+          baseline=tests/claude-code/jj-purity-upstream-baseline.txt
+          ./tests/claude-code/test-jj-purity.sh --signature --tree .upstream > /tmp/upstream.txt
+
+          added=$(comm -13 <(sort -u "$baseline") /tmp/upstream.txt)
+          removed=$(comm -23 <(sort -u "$baseline") /tmp/upstream.txt)
+
+          if [ -n "$removed" ]; then
+            echo "::notice::Upstream no longer has these git commands (baseline can shrink):"
+            printf '  %s\n' "$removed"
+            echo ""
+          fi
+
+          if [ -z "$added" ]; then
+            echo "No new git commands upstream. Baseline is current."
+            exit 0
+          fi
+
+          echo "::error::Upstream added git commands not in this fork's baseline."
+          echo ""
+          echo "Each of these needs a jj rewrite before the next rebase, or an"
+          echo "allowlist entry with a reason:"
+          echo ""
+          printf '  %s\n' "$added"
+          echo ""
+          echo "Once handled, refresh the baseline:"
+          echo "  ./tests/claude-code/test-jj-purity.sh --signature --tree .upstream \\"
+          echo "    > tests/claude-code/jj-purity-upstream-baseline.txt"
+          exit 1
