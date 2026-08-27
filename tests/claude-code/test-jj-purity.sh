@@ -45,6 +45,11 @@ SKILLS_DIR="$REPO_ROOT/skills"
 [ -d "$SKILLS_DIR" ] || { echo "no skills/ directory under $REPO_ROOT" >&2; exit 2; }
 
 # A git invocation: 'git' as a command word, not part of github/.github/foo-git.
+#
+# `jj git push` / `jj git fetch` / `jj git init` are jj subcommands -- they are
+# how jj talks to a git remote and are the correct thing to write here. They are
+# neutralised in the probe below before the pattern is applied, so they never
+# register as git usage.
 # Each candidate line is probed with a leading space prepended, so the pattern
 # needs no '^' alternative -- '^' inside a group is not portable across awks.
 GIT_RE='[^A-Za-z0-9_./-]git[[:space:]]+[-A-Za-z]'
@@ -58,13 +63,17 @@ scan_markdown() {
     awk -v re="$GIT_RE" '
         /^[[:space:]]*```+[[:space:]]*(bash|sh|shell|console)[[:space:]]*$/ { infence=1; next }
         /^[[:space:]]*```+[[:space:]]*$/                                    { infence=0; next }
-        infence { probe = " " $0; if (probe ~ re) printf "%s:%d:%s\n", FILENAME, FNR, $0 }
+        infence { probe = " " $0
+          gsub(/[^A-Za-z0-9_.\/-]jj[[:space:]]+git[[:space:]]/, " jj-git ", probe)
+          if (probe ~ re) printf "%s:%d:%s\n", FILENAME, FNR, $0 }
     ' "$1"
 }
 
 scan_script() {
     awk -v re="$GIT_RE" '
-        { probe = " " $0; if (probe ~ re) printf "%s:%d:%s\n", FILENAME, FNR, $0 }
+        { probe = " " $0
+          gsub(/[^A-Za-z0-9_.\/-]jj[[:space:]]+git[[:space:]]/, " jj-git ", probe)
+          if (probe ~ re) printf "%s:%d:%s\n", FILENAME, FNR, $0 }
     ' "$1"
 }
 
