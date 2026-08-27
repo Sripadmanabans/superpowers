@@ -1,5 +1,8 @@
 # Superpowers
 
+> **This is a Jujutsu (jj) fork.** Version control throughout these skills is
+> driven by jj rather than git. See [JJ-FORK.md](JJ-FORK.md).
+
 Superpowers is a complete software development methodology for your coding agents, built on top of a set of composable skills and some initial instructions that make sure your agent uses them.
 
 ## Table of Contents
