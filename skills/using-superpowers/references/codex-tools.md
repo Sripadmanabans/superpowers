@@ -80,26 +80,28 @@ default_subagent_reasoning_effort = "medium"
 
 ## Environment Detection
 
-Skills that create worktrees or finish branches should detect their
-environment with read-only git commands before proceeding:
+Skills that create workspaces or finish work should detect their
+environment with read-only jj commands before proceeding:
 
 ```bash
-GIT_DIR=$(cd "$(git rev-parse --git-dir)" 2>/dev/null && pwd -P)
-GIT_COMMON=$(cd "$(git rev-parse --git-common-dir)" 2>/dev/null && pwd -P)
-BRANCH=$(git branch --show-current)
+ROOT=$(jj root)
+WORKSPACE=$(jj workspace list | awk '$2=="." {sub(/:$/,"",$1); print $1}')
 ```
 
-- `GIT_DIR != GIT_COMMON` → already in a linked worktree (skip creation)
-- `BRANCH` empty → detached HEAD (cannot branch/push/PR from sandbox)
+- `$WORKSPACE` is not `default` → already in a secondary workspace (skip creation)
+
+There is no detached-HEAD signal to check for. Every jj change is a first-class
+commit that needs no bookmark to hold it, so the sandbox restriction to detect
+is whether pushing is blocked, not whether the work has somewhere to live.
 
 See `using-git-worktrees` Step 0 and `finishing-a-development-branch`
 Step 1 for how each skill uses these signals.
 
 ## Codex App Finishing
 
-When the sandbox blocks branch/push operations (detached HEAD in an
-externally managed worktree), the agent commits all work and informs
-the user to use the App's native controls:
+When the sandbox blocks push operations in an externally managed
+workspace, the agent describes all work and informs the user to use
+the App's native controls:
 
 - **"Create branch"** — names the branch, then commit/push/PR via App UI
 - **"Hand off to local"** — transfers work to the user's local checkout
