@@ -97,7 +97,7 @@ your path and complete them in order.
 3. **Ask clarifying questions** — one at a time, understand purpose/constraints/success criteria
 4. **Propose 2-3 approaches** — with trade-offs and your recommendation
 5. **Present design** — in sections scaled to their complexity, get user approval after each section
-6. **Write design doc** — save to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` and commit
+6. **Write design doc** — save to the specs directory (resolved under Documentation below) and commit
 7. **Spec self-review** — quick inline check for placeholders, contradictions, ambiguity, scope (see below)
 8. **User reviews written spec** — ask user to review the spec file before proceeding
 9. **Transition to implementation** — invoke writing-plans skill to create implementation plan
@@ -203,10 +203,17 @@ is the whole process.
 
 **Documentation:**
 
-- Write the validated design (spec) to `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
-  - (User preferences for spec location override this default)
+- Write the validated design (spec) to the first of these that applies:
+  1. **A specs directory declared in your instructions** (CLAUDE.md or project
+     docs) — instructions can express routing a flat setting cannot.
+  2. **`$SUPERPOWERS_SPECS_DIR`**, if set. Set it machine-wide through the `env`
+     block in Claude Code's `settings.json`.
+  3. **`docs/superpowers/specs/`** — the default when neither is present.
+
+  Filename: `YYYY-MM-DD-<topic>-design.md`, unless your instructions say
+  otherwise. Report the path you actually used, not the default.
 - Use elements-of-style:writing-clearly-and-concisely skill if available
-- Commit the design document to git
+- Commit the design document (`jj commit`)
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:

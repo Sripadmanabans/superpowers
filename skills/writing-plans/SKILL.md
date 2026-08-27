@@ -15,8 +15,19 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated workspace, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-- (User preferences for plan location override this default)
+**Save plans to** the first of these that applies:
+
+1. **A plans directory declared in your instructions** (CLAUDE.md or project
+   docs). Instructions come first because they can express routing that a flat
+   setting cannot — a destination outside the repository, per-repo subfolders,
+   or naming rules beyond the default.
+2. **`$SUPERPOWERS_PLANS_DIR`**, if set. Set it machine-wide through the `env`
+   block in Claude Code's `settings.json`.
+3. **`docs/superpowers/plans/`** — the default when neither is present.
+
+Filename: `YYYY-MM-DD-<feature-name>.md`, unless your instructions say otherwise.
+Report the path you actually used, not the default, when you announce the plan
+is saved.
 
 ## Scope Check
 
@@ -155,7 +166,7 @@ If you find issues, fix them inline. No need to re-review — just fix and move 
 
 After saving the plan, offer execution choice:
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Two execution options:**
+**"Plan complete and saved to `<plans-dir>/<filename>.md`. Two execution options:**
 
 **1. Subagent-Driven (recommended)** - I dispatch a fresh subagent per task, review between tasks, fast iteration
 
