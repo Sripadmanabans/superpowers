@@ -25,6 +25,11 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
    block in Claude Code's `settings.json`.
 3. **`docs/superpowers/plans/`** — the default when neither is present.
 
+A relative value resolves from the repository root (`jj root`), never from the
+current directory — working in a subdirectory must not scatter documents into
+it. An absolute value is used exactly as given, which is how a single directory
+collects documents from every repository.
+
 Filename: `YYYY-MM-DD-<feature-name>.md`, unless your instructions say otherwise.
 Report the path you actually used, not the default, when you announce the plan
 is saved.
