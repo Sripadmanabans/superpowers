@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# Generate a review package: commit list, stat summary, and the net
+# Generate a review package: change list, stat summary, and the net
 # diff with extended context, written to a file the reviewer reads in one
-# call. Using the recorded per-task BASE (not HEAD~1) keeps multi-commit
-# tasks intact.
+# call. Using the recorded per-task BASE (not the immediate parent) keeps
+# multi-change tasks intact.
+#
+# This repository uses Jujutsu (jj). BASE and HEAD are revsets -- commit IDs,
+# change IDs, or bookmarks all work. jj's `BASE..HEAD` range has the same
+# meaning as git's: everything reachable from HEAD that is not reachable from
+# BASE.
 #
 # Usage: review-package PLAN_FILE BASE HEAD [OUTFILE]
-# Default OUTFILE: <repo-root>/.superpowers/sdd/<plan-basename>/review-<base7>..<head7>.diff
+# Default OUTFILE: <repo-root>/.superpowers/sdd/<plan-basename>/review-<base8>..<head8>.diff
 # (named per range, so a re-review after fixes gets a distinct fresh file).
 set -euo pipefail
 
@@ -19,28 +24,32 @@ base=$2
 head=$3
 [ -f "$plan" ] || { echo "no such plan file: $plan" >&2; exit 2; }
 
-git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
-git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
+# An unresolvable revset makes `jj log` exit non-zero, which is the check.
+jj log --no-graph -r "$base" -T '""' >/dev/null 2>&1 || { echo "bad BASE: $base" >&2; exit 2; }
+jj log --no-graph -r "$head" -T '""' >/dev/null 2>&1 || { echo "bad HEAD: $head" >&2; exit 2; }
+
+short() { jj log --no-graph -r "$1" -T 'commit_id.short(8)'; }
 
 if [ $# -eq 4 ]; then
   out=$4
 else
   dir=$("$(cd "$(dirname "$0")" && pwd)/sdd-workspace" "$plan")
-  out="$dir/review-$(git rev-parse --short "$base")..$(git rev-parse --short "$head").diff"
+  out="$dir/review-$(short "$base")..$(short "$head").diff"
 fi
 
 {
   echo "# Review package: ${base}..${head}"
   echo
-  echo "## Commits"
-  git log --oneline "${base}..${head}"
+  echo "## Changes"
+  jj log --no-graph -r "${base}..${head}" \
+     -T 'commit_id.short(8) ++ " " ++ description.first_line() ++ "\n"'
   echo
   echo "## Files changed"
-  git diff --stat "${base}..${head}"
+  jj diff --stat --from "$base" --to "$head"
   echo
   echo "## Diff"
-  git diff -U10 "${base}..${head}"
+  jj diff --git --context 10 --from "$base" --to "$head"
 } > "$out"
 
-commits=$(git rev-list --count "${base}..${head}")
-echo "wrote ${out}: ${commits} commit(s), $(wc -c < "$out" | tr -d ' ') bytes"
+changes=$(jj log --no-graph -r "${base}..${head}" -T '"x\n"' | wc -l | tr -d ' ')
+echo "wrote ${out}: ${changes} change(s), $(wc -c < "$out" | tr -d ' ') bytes"
