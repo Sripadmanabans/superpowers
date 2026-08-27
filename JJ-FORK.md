@@ -79,6 +79,28 @@ The check scans only runnable contexts — fenced shell blocks and shell scripts
 Prose that discusses git as the subject of a worked example is out of scope; see
 `tests/claude-code/jj-purity-allowlist.txt`.
 
+## Version scheme and picking up edits
+
+This fork versions as `<upstream-version>-jj.<n>` — `6.3.0-jj.1` sits on upstream
+v6.3.0. The suffix is not cosmetic: `claude plugin update` compares the version
+in `plugin.json` and skips re-copying when it is unchanged, so editing a skill
+has no effect on the installed copy until the version moves. Bump `-jj.<n>` when
+you want changes picked up, and reset it on a new upstream base.
+
+Claude Code compares versions by inequality rather than semver precedence, so
+the prerelease suffix updating "from 6.3.0 to 6.3.0-jj.1" is accepted even
+though semver ranks a prerelease lower.
+
+```bash
+# after editing, with plugin.json + marketplace.json bumped:
+claude plugin marketplace update superpowers-dev
+claude plugin update superpowers          # restart to apply
+```
+
+`claude plugin tag` creates a `superpowers--v<version>` git tag from that same
+field. The tag is a release marker derived from the version; it is not what
+drives an update.
+
 ## Taking a new upstream release
 
 ```bash
