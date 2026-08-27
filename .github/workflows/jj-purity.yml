@@ -21,7 +21,7 @@ jobs:
     name: fork is jj-pure
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - run: ./tests/claude-code/test-jj-purity.sh
 
   # Has UPSTREAM added git commands we have not accounted for?
@@ -35,10 +35,10 @@ jobs:
     name: upstream added no new git commands
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Check out upstream
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: obra/superpowers
           path: .upstream
