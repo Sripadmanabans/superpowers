@@ -33,6 +33,32 @@ translated: the submodule guard (jj has no submodules), the detached-HEAD menu
 (every jj change is a first-class commit), and the `MAIN_ROOT` directory dance
 (jj addresses the repo, not a checked-out tree).
 
+## Configurable document locations
+
+Upstream hardcodes `docs/superpowers/plans/` and `docs/superpowers/specs/`,
+noting only in a parenthetical that user preferences override them. This fork
+makes that operational with an explicit resolution order:
+
+1. A directory declared in your instructions (CLAUDE.md or project docs)
+2. `$SUPERPOWERS_PLANS_DIR` / `$SUPERPOWERS_SPECS_DIR`
+3. The upstream default
+
+Instructions rank above the environment variable because they can express
+routing a flat value cannot — a destination outside the repository, per-repo
+subfolders, naming rules. The variable is for a stable machine-wide default and
+is set through the `env` block in Claude Code's `settings.json`.
+
+**Why not the plugin's own `userConfig`.** Claude Code plugins can declare
+`userConfig` options in `plugin.json`, settable via `/plugin configure` or
+`claude plugin install --config key=value`. Those values reach *hooks* — as
+`${user_config.KEY}` or `$CLAUDE_PLUGIN_OPTION_<KEY>` in the hook environment —
+and nothing else. A skill is prose an agent reads before running a command, and
+the agent's shell does not receive those variables, so `userConfig` cannot carry
+configuration into a skill. An ordinary environment variable can.
+
+This is the one divergence in this fork that is not about jj. It is also the
+only change to `skills/brainstorming/`, which otherwise tracks upstream exactly.
+
 ## Guarding against drift
 
 Upstream adds git commands in ordinary releases — v6.2.0 → v6.3.0 added a
