@@ -15,8 +15,19 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 
 **Context:** If working in an isolated workspace, it should have been created via the `superpowers:using-git-worktrees` skill at execution time.
 
-**Save plans to:** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md`
-- (User preferences for plan location override this default)
+**Save plans to** the first of these that applies:
+
+1. **A plans directory declared in your instructions** (CLAUDE.md or project
+   docs). Instructions come first because they can express routing that a flat
+   setting cannot — a destination outside the repository, per-repo subfolders,
+   or naming rules beyond the default.
+2. **`$SUPERPOWERS_PLANS_DIR`**, if set. Set it machine-wide through the `env`
+   block in Claude Code's `settings.json`.
+3. **`docs/superpowers/plans/`** — the default when neither is present.
+
+Filename: `YYYY-MM-DD-<feature-name>.md`, unless your instructions say otherwise.
+Report the path you actually used, not the default, when you announce the plan
+is saved.
 
 ## Scope Check
 
@@ -175,7 +186,7 @@ them to review the plan and choose an execution method before implementation.
 
 **When no execution method has already been supplied:**
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Please review the plan. Which execution approach would you prefer?**
+**"Plan complete and saved to `<plans-dir>/<filename>.md`. Please review the plan. Which execution approach would you prefer?**
 
 - **Subagent-driven** - A fresh subagent implements each task and a fresh reviewer checks it before the next one starts, then a whole-branch review at the end. Most thorough; costs a fresh context per task and per review.
 - **Native** - I implement every task myself in this session, the way this harness runs work, then one fresh reviewer on the most capable model checks the whole branch. Cheapest and fastest; no independent review until the end. Runs well with a mid-tier session model, since the plan carries the design.
@@ -184,7 +195,7 @@ them to review the plan and choose an execution method before implementation.
 
 **When an execution method has already been supplied:**
 
-**"Plan complete and saved to `docs/superpowers/plans/<filename>.md`. Please review the plan. Does it capture what you want?"**
+**"Plan complete and saved to `<plans-dir>/<filename>.md`. Please review the plan. Does it capture what you want?"**
 
 **If Subagent-driven chosen:**
 - **REQUIRED SUB-SKILL:** Use superpowers:subagent-driven-development
