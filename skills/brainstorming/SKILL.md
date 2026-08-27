@@ -221,9 +221,17 @@ For a small change, the short design covers the same points in a line
 or two each and goes straight to your human partner, without the
 builder check.
 
-**Where it goes:** in a software repo,
-`docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`, committed.
-Otherwise, ask. Your human partner's preferences override both.
+**Where it goes:** in a software repo, the first of these that applies:
+
+1. **A specs directory declared in your instructions** (CLAUDE.md or project
+   docs) — instructions can express routing a flat setting cannot.
+2. **`$SUPERPOWERS_SPECS_DIR`**, if set. Set it machine-wide through the `env`
+   block in Claude Code's `settings.json`.
+3. **`docs/superpowers/specs/`** — the default when neither is present.
+
+Filename: `YYYY-MM-DD-<topic>-design.md`, unless your instructions say
+otherwise. Commit it (`jj commit`), and report the path you actually used,
+not the default. Outside a software repo, ask.
 
 **Builder check** (for a project): dispatch a fresh subagent with
 `builder-check-prompt.md` in this directory. When you tell your human
