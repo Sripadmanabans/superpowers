@@ -5,7 +5,8 @@
 # A failing command records nothing: the task is not complete.
 #
 # Usage: task-done PLAN_FILE TASK_NUMBER BASE -- TEST_COMMAND [ARGS...]
-#   BASE is the SHA task-start printed; the completion line records BASE..HEAD.
+#   BASE is the revision task-start printed; the completion line records
+#   BASE..@-, where `@-` is the change below the working copy (see task-start).
 # Exit: the test command's exit status.
 set -euo pipefail
 
@@ -20,7 +21,10 @@ base=$3
 shift 4
 sdd="$(cd "$(dirname "$0")/../../subagent-driven-development/scripts" && pwd)"
 
-git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
+# An unresolvable revset makes `jj log` exit non-zero, which is the check.
+jj log --no-graph -r "$base" -T '""' >/dev/null 2>&1 || { echo "bad BASE: $base" >&2; exit 2; }
+
+short() { jj log --no-graph -r "$1" -T 'commit_id.short(7)'; }
 
 dir=$("$sdd/sdd-workspace" "$plan")
 log="$dir/task-${n}-tests.log"
@@ -47,6 +51,6 @@ fi
 
 last=$(grep -v '^[[:space:]]*$' "$log" | tail -n 1)
 [ -f "$ledger" ] || printf '# SDD ledger — plan: %s\n' "$plan" > "$ledger"
-line="Task $n: complete (commits $(git rev-parse --short=7 "$base")..$(git rev-parse --short=7 HEAD), tests: $cmd → $last)"
+line="Task $n: complete (commits $(short "$base")..$(short '@-'), tests: $cmd → $last)"
 printf '%s\n' "$line" >> "$ledger"
 echo "ledger: $line"

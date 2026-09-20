@@ -109,8 +109,8 @@ digraph process {
 
 Ensure the work happens in an isolated workspace: use
 superpowers:using-git-worktrees to create one or verify the existing one.
-Never start implementation on a main/master branch without your human
-partner's explicit consent.
+Never start implementation on top of a main/master bookmark without your
+human partner's explicit consent.
 
 Conversation memory does not survive compaction. An inline executor that
 loses its place re-implements tasks whose commits already exist — the same
@@ -131,14 +131,15 @@ and the new one resumes from the same ledger.
 - Check for this plan's ledger at `<workspace>/progress.md`. If its first
   line names your plan file, tasks with a `Task <N>: complete` line are
   DONE — do not redo them; resume at the first task without one. Their
-  commits exist in git even when your context no longer remembers making
-  them: after compaction, trust the ledger and `git log` over your own
+  commits exist in the repository even when your context no longer remembers
+  making them: after compaction, trust the ledger and `jj log` over your own
   recollection. A ledger whose first line names a different plan file is
   another plan's progress: leave it and start your own, fresh.
 - Create the ledger with its identity as the first line:
   `# SDD ledger — plan: <plan file path>`.
-- `git clean -fdx` will destroy the workspace (it's git-ignored scratch);
-  if that happens, recover from `git log`.
+- The workspace is ignored scratch, so anything that sweeps ignored files
+  (`rm -rf`, an ignore-cleaning tool) destroys it; if that happens, recover
+  from `jj log`.
 
 Read the plan once, note its context and Global Constraints, and create a
 todo per task. If the plan names a Spec, read that too: the spec is the
@@ -234,8 +235,8 @@ mark the todo complete and take the next task.
 ## Final Review
 
 Run `../subagent-driven-development/scripts/review-package PLAN_FILE MERGE_BASE HEAD`
-(MERGE_BASE = the commit the branch started from, e.g.
-`git merge-base main HEAD`) and review from the file it prints.
+(MERGE_BASE = the change the work started from, e.g. the revset
+`fork_point(main | @-)`) and review from the file it prints.
 
 **With a subagent tool:** dispatch the reviewer on the most capable
 available model — the whole-branch review is a judgment task — using
@@ -298,7 +299,7 @@ message is the only place the decisions you took on your human partner's
 behalf — and the findings you chose not to act on — reach them.
 
 When the final review is clean and its fixes are committed, delete this
-plan's workspace directory — the git history is the record now. Sibling
+plan's workspace directory — the repository history is the record now. Sibling
 directories belong to other plans; leave them alone.
 
 Use superpowers:finishing-a-development-branch.
@@ -367,7 +368,7 @@ Deferred minors:
 - README lacks a usage example
 - recovery.js could split verify/repair into two files
 
-[Delete this plan's workspace — the record now lives in git]
+[Delete this plan's workspace — the record now lives in the repository]
 
 Using superpowers:finishing-a-development-branch.
 ```

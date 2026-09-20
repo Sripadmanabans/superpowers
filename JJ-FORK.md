@@ -24,9 +24,11 @@ call paths.
 | `skills/using-git-worktrees/` | `jj workspace` instead of `git worktree`; sibling placement by default |
 | `skills/finishing-a-development-branch/` | fetch/rebase/bookmark instead of checkout/pull/merge/branch; proactive cleanup guard |
 | `skills/requesting-code-review/` | revsets instead of SHAs; `jj diff --from/--to` |
-| `skills/subagent-driven-development/scripts/` | `jj root`, `jj log -r BASE..HEAD`, `jj diff` |
+| `skills/subagent-driven-development/scripts/` | `jj root`, `jj log -r BASE..HEAD`, `jj diff`; range guards via revsets |
+| `skills/executing-plans/` | `task-start`/`task-done` record `@-` instead of `HEAD`; ledger and recovery prose in jj terms |
 | `skills/writing-plans/` | plan template commits with `jj commit` (no staging step) |
 | `skills/using-superpowers/references/codex-tools.md` | jj environment detection |
+| `tests/claude-code/test-sdd-workspace.sh`, `test-executing-plans-scripts.sh` | fixtures build a jj repo; isolated `JJ_CONFIG` replaces `-c user.*`/`commit.gpgsign=false` |
 
 Three git concepts have no jj counterpart and were removed rather than
 translated: the submodule guard (jj has no submodules), the detached-HEAD menu
@@ -62,7 +64,9 @@ only change to `skills/brainstorming/`, which otherwise tracks upstream exactly.
 ## Guarding against drift
 
 Upstream adds git commands in ordinary releases — v6.2.0 → v6.3.0 added a
-`git status --porcelain` safety guard. A three-way merge only catches such an
+`git status --porcelain` safety guard, and v6.3.0 → v6.4.1 added five more:
+three in the new `executing-plans` helper scripts and two `review-package`
+range guards, none of which conflicted. A three-way merge only catches such an
 addition when it lands next to a line this fork already changed; an addition in
 an untouched region merges clean and silently, which is the case worth guarding.
 
@@ -81,14 +85,14 @@ Prose that discusses git as the subject of a worked example is out of scope; see
 
 ## Version scheme and picking up edits
 
-This fork versions as `<upstream-version>-jj.<n>` — `6.3.0-jj.1` sits on upstream
-v6.3.0. The suffix is not cosmetic: `claude plugin update` compares the version
+This fork versions as `<upstream-version>-jj.<n>` — `6.4.1-jj.1` sits on upstream
+v6.4.1. The suffix is not cosmetic: `claude plugin update` compares the version
 in `plugin.json` and skips re-copying when it is unchanged, so editing a skill
 has no effect on the installed copy until the version moves. Bump `-jj.<n>` when
 you want changes picked up, and reset it on a new upstream base.
 
 Claude Code compares versions by inequality rather than semver precedence, so
-the prerelease suffix updating "from 6.3.0 to 6.3.0-jj.1" is accepted even
+the prerelease suffix updating "from 6.4.1 to 6.4.1-jj.1" is accepted even
 though semver ranks a prerelease lower.
 
 ```bash

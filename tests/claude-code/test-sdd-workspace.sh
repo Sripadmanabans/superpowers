@@ -29,12 +29,24 @@ main() {
     TEST_ROOT="$(mktemp -d)"
     trap cleanup EXIT
 
+    # Isolate from the developer's jj config: a fixture identity, and signing
+    # off (a configured signing key cannot sign as the fixture user).
+    cat > "$TEST_ROOT/jjconfig.toml" <<'CFG'
+[user]
+name = "t"
+email = "t@example.com"
+[signing]
+behavior = "drop"
+CFG
+    export JJ_CONFIG="$TEST_ROOT/jjconfig.toml"
+
     # Resolve repo to its physical path so string comparisons match the
-    # helper's output (git rev-parse --show-toplevel resolves symlinks; on
-    # macOS mktemp lives under /var -> /private/var).
-    git init -q -b main "$TEST_ROOT/repo"
+    # helper's output (jj root resolves symlinks; on macOS mktemp lives
+    # under /var -> /private/var).
+    mkdir -p "$TEST_ROOT/repo"
+    jj --quiet git init "$TEST_ROOT/repo"
     local repo
-    repo="$(cd "$TEST_ROOT/repo" && git rev-parse --show-toplevel)"
+    repo="$(cd "$TEST_ROOT/repo" && jj root)"
 
     cat > "$repo/plan-a.md" <<'PLAN'
 # Plan A
@@ -98,24 +110,25 @@ PLAN
 
     printf 'x\n' > "$dir_a/artifact.md"
     local status
-    status="$(cd "$repo" && git status --porcelain)"
-    # plan-a.md/plan-b.md are intentionally untracked fixture files; only the
-    # workspace must be invisible.
+    status="$(cd "$repo" && jj status)"
+    # plan-a.md/plan-b.md are intentionally part of the fixture change; only
+    # the workspace must be invisible.
     if [[ "$status" != *".superpowers"* ]]; then
-        pass "workspace invisible to git status"
+        pass "workspace invisible to jj status"
     else
-        fail "workspace invisible to git status"
+        fail "workspace invisible to jj status"
         echo "    status: $status"
     fi
 
-    ( cd "$repo" && git add -A )
-    local staged
-    staged="$(cd "$repo" && git diff --cached --name-only)"
-    if [[ "$staged" != *".superpowers"* ]]; then
-        pass "git add -A does not stage the workspace"
+    # jj has no staging area -- it snapshots the working copy automatically,
+    # so the check is that automatic tracking never picks the workspace up.
+    local tracked
+    tracked="$(cd "$repo" && jj file list)"
+    if [[ "$tracked" != *".superpowers"* ]]; then
+        pass "automatic tracking does not pick up the workspace"
     else
-        fail "git add -A does not stage the workspace"
-        echo "    staged: $staged"
+        fail "automatic tracking does not pick up the workspace"
+        echo "    tracked: $tracked"
     fi
 
     # --- task-brief lands in its plan's directory ---
@@ -130,13 +143,13 @@ PLAN
     fi
 
     # --- review-package takes the plan first and lands in its directory ---
-    local git_id=(-c user.email=t@example.com -c user.name=t -c commit.gpgsign=false)
+    # jj tracks new files automatically, so there is no staging step.
     ( cd "$repo" \
-        && git "${git_id[@]}" commit -qm c1 \
-        && printf 'y\n' > f && git add f \
-        && git "${git_id[@]}" commit -qm c2 )
+        && jj --quiet commit -m c1 \
+        && printf 'y\n' > f \
+        && jj --quiet commit -m c2 )
     local rp_out rp_path
-    rp_out="$(cd "$repo" && "$SDD_SCRIPTS/review-package" plan-a.md HEAD~1 HEAD)"
+    rp_out="$(cd "$repo" && "$SDD_SCRIPTS/review-package" plan-a.md '@--' '@-')"
     rp_path="$(printf '%s\n' "$rp_out" | sed -n 's/^wrote \(.*\): [0-9].*$/\1/p')"
     case "$rp_path" in
         "$repo/.superpowers/sdd/plan-a/review-"*.diff)
@@ -148,7 +161,7 @@ PLAN
     esac
 
     rc=0
-    (cd "$repo" && "$SDD_SCRIPTS/review-package" HEAD~1 HEAD >/dev/null 2>&1) || rc=$?
+    (cd "$repo" && "$SDD_SCRIPTS/review-package" '@--' '@-' >/dev/null 2>&1) || rc=$?
     if [[ "$rc" -eq 2 ]]; then
         pass "review-package without a plan errors with exit 2"
     else
@@ -157,7 +170,7 @@ PLAN
     fi
 
     local rp_explicit
-    rp_explicit="$(cd "$repo" && "$SDD_SCRIPTS/review-package" plan-a.md HEAD~1 HEAD "$TEST_ROOT/explicit.diff")"
+    rp_explicit="$(cd "$repo" && "$SDD_SCRIPTS/review-package" plan-a.md '@--' '@-' "$TEST_ROOT/explicit.diff")"
     if [[ -s "$TEST_ROOT/explicit.diff" && "$rp_explicit" == *"$TEST_ROOT/explicit.diff"* ]]; then
         pass "review-package honors an explicit OUTFILE"
     else
@@ -166,11 +179,14 @@ PLAN
     fi
 
     # --- range guards: BASE must be an ancestor of HEAD, range must be non-empty ---
+    # A sibling of @-: same parent, so it is not an ancestor of @-.
+    # --no-edit keeps the working copy where it is.
+    ( cd "$repo" && jj --quiet new --no-edit -m divergent '@--' )
     local divergent
-    divergent="$(cd "$repo" && git "${git_id[@]}" commit-tree 'HEAD~1^{tree}' -p 'HEAD~1' -m divergent)"
+    divergent="$(cd "$repo" && jj log --no-graph -r 'description(substring:"divergent")' -T 'commit_id')"
     rc=0
     local guard_err
-    guard_err="$(cd "$repo" && "$SDD_SCRIPTS/review-package" plan-a.md "$divergent" HEAD 2>&1 >/dev/null)" || rc=$?
+    guard_err="$(cd "$repo" && "$SDD_SCRIPTS/review-package" plan-a.md "$divergent" '@-' 2>&1 >/dev/null)" || rc=$?
     if [[ "$rc" -eq 3 && "$guard_err" == *"not a descendant"* ]]; then
         pass "review-package rejects a BASE that is not an ancestor of HEAD with exit 3"
     else
@@ -180,7 +196,7 @@ PLAN
     fi
 
     rc=0
-    guard_err="$(cd "$repo" && "$SDD_SCRIPTS/review-package" plan-a.md HEAD HEAD 2>&1 >/dev/null)" || rc=$?
+    guard_err="$(cd "$repo" && "$SDD_SCRIPTS/review-package" plan-a.md '@-' '@-' 2>&1 >/dev/null)" || rc=$?
     if [[ "$rc" -eq 3 && "$guard_err" == *"empty commit range"* ]]; then
         pass "review-package rejects an empty BASE..HEAD range with exit 3"
     else
@@ -189,27 +205,27 @@ PLAN
         echo "    stderr: $guard_err"
     fi
 
-    # --- Worktree isolation: a linked worktree resolves its own workspace ---
+    # --- Workspace isolation: a second jj workspace resolves its own directory ---
     local wt="$TEST_ROOT/wt"
-    ( cd "$repo" && git worktree add -q "$wt" -b wt-feature )
+    ( cd "$repo" && jj --quiet workspace add "$wt" )
     local wt_root wt_dir
-    wt_root="$(cd "$wt" && git rev-parse --show-toplevel)"
+    wt_root="$(cd "$wt" && jj root)"
     wt_dir="$(cd "$wt" && "$SDD_SCRIPTS/sdd-workspace" plan-a.md)"
     if [[ "$wt_dir" == "$wt_root/.superpowers/sdd/plan-a" && "$wt_dir" != "$dir_a" ]]; then
-        pass "linked worktree resolves its own distinct workspace"
+        pass "second jj workspace resolves its own distinct directory"
     else
-        fail "linked worktree resolves its own distinct workspace"
+        fail "second jj workspace resolves its own distinct directory"
         echo "    main: $dir_a"
         echo "    wt:   $wt_dir"
     fi
 
     printf 'y\n' > "$wt_dir/artifact.md"
     local wt_status
-    wt_status="$(cd "$wt" && git status --porcelain)"
+    wt_status="$(cd "$wt" && jj status)"
     if [[ "$wt_status" != *".superpowers"* ]]; then
-        pass "worktree workspace invisible to git status"
+        pass "second workspace's directory invisible to jj status"
     else
-        fail "worktree workspace invisible to git status"
+        fail "second workspace's directory invisible to jj status"
         echo "    status: $wt_status"
     fi
 

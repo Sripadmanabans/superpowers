@@ -30,10 +30,21 @@ main() {
     TEST_ROOT="$(mktemp -d)"
     trap cleanup EXIT
 
-    git init -q -b main "$TEST_ROOT/repo"
+    # Isolate from the developer's jj config: a fixture identity, and signing
+    # off (a configured signing key cannot sign as the fixture user).
+    cat > "$TEST_ROOT/jjconfig.toml" <<'CFG'
+[user]
+name = "t"
+email = "t@example.com"
+[signing]
+behavior = "drop"
+CFG
+    export JJ_CONFIG="$TEST_ROOT/jjconfig.toml"
+
+    mkdir -p "$TEST_ROOT/repo"
+    jj --quiet git init "$TEST_ROOT/repo"
     local repo
-    repo="$(cd "$TEST_ROOT/repo" && git rev-parse --show-toplevel)"
-    local git_id=(-c user.email=t@example.com -c user.name=t -c commit.gpgsign=false)
+    repo="$(cd "$TEST_ROOT/repo" && jj root)"
 
     cat > "$repo/plan.md" <<'PLAN'
 # Plan
@@ -46,9 +57,10 @@ Do the first thing.
 
 Do the second thing.
 PLAN
-    ( cd "$repo" && git add plan.md && git "${git_id[@]}" commit -qm fixture )
+    # jj tracks new files automatically, so there is no staging step.
+    ( cd "$repo" && jj --quiet commit -m fixture )
     local base
-    base="$(cd "$repo" && git rev-parse HEAD)"
+    base="$(cd "$repo" && jj log --no-graph -r '@-' -T 'commit_id')"
 
     # --- task-start: argument validation ---
     local rc=0
@@ -69,9 +81,9 @@ PLAN
         echo "    got: $out"
     fi
     if [[ "$out" == *"base: $base"* ]]; then
-        pass "task-start prints BASE as the current HEAD"
+        pass "task-start prints BASE as the change below the working copy"
     else
-        fail "task-start prints BASE as the current HEAD"
+        fail "task-start prints BASE as the change below the working copy"
         echo "    got: $out"
     fi
     if [[ -s "$repo/.superpowers/sdd/plan/task-1-brief.md" ]]; then
@@ -81,9 +93,9 @@ PLAN
     fi
 
     # --- task-done: records a passing task ---
-    ( cd "$repo" && echo x > work.txt && git add work.txt && git "${git_id[@]}" commit -qm "task 1" )
+    ( cd "$repo" && echo x > work.txt && jj --quiet commit -m "task 1" )
     local head
-    head="$(cd "$repo" && git rev-parse HEAD)"
+    head="$(cd "$repo" && jj log --no-graph -r '@-' -T 'commit_id')"
     out="$(cd "$repo" && "$EP_SCRIPTS/task-done" plan.md 1 "$base" -- sh -c 'echo "Ran 3 tests"; echo OK')"
     rc=$?
     local ledger="$repo/.superpowers/sdd/plan/progress.md"
