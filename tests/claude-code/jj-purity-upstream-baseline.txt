@@ -1,3 +1,6 @@
+skills/executing-plans/scripts/task-done|git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
+skills/executing-plans/scripts/task-done|line="Task $n: complete (commits $(git rev-parse --short=7 "$base")..$(git rev-parse --short=7 HEAD), tests: $cmd → $last)"
+skills/executing-plans/scripts/task-start|echo "base: $(git rev-parse HEAD)"
 skills/finishing-a-development-branch/SKILL.md|# git push origin HEAD:refs/heads/<new-branch>
 skills/finishing-a-development-branch/SKILL.md|git -C "$WORKTREE_PATH" status --porcelain -uall
 skills/finishing-a-development-branch/SKILL.md|git branch -d <feature-branch>
@@ -14,12 +17,14 @@ skills/finishing-a-development-branch/SKILL.md|MAIN_ROOT=$(git -C "$(git rev-par
 skills/finishing-a-development-branch/SKILL.md|WORKTREE_PATH=$(git rev-parse --show-toplevel)
 skills/requesting-code-review/code-reviewer.md|git diff --stat [BASE_SHA]..[HEAD_SHA]
 skills/requesting-code-review/code-reviewer.md|git diff [BASE_SHA]..[HEAD_SHA]
-skills/requesting-code-review/SKILL.md|BASE_SHA=$(git rev-parse HEAD~1) # or origin/main
+skills/requesting-code-review/SKILL.md|BASE_SHA=$(git rev-parse HEAD~1) # or: git merge-base origin/main HEAD
 skills/requesting-code-review/SKILL.md|HEAD_SHA=$(git rev-parse HEAD)
+skills/subagent-driven-development/scripts/review-package|[ "$(git rev-list --count "${base}..${head}")" -gt 0 ] || { echo "empty commit range: ${base}..${head}" >&2; exit 3; }
 skills/subagent-driven-development/scripts/review-package|commits=$(git rev-list --count "${base}..${head}")
 skills/subagent-driven-development/scripts/review-package|git diff --stat "${base}..${head}"
 skills/subagent-driven-development/scripts/review-package|git diff -U10 "${base}..${head}"
 skills/subagent-driven-development/scripts/review-package|git log --oneline "${base}..${head}"
+skills/subagent-driven-development/scripts/review-package|git merge-base --is-ancestor "$base" "$head" || { echo "HEAD is not a descendant of BASE: ${base}..${head}" >&2; exit 3; }
 skills/subagent-driven-development/scripts/review-package|git rev-parse --verify --quiet "$base" >/dev/null || { echo "bad BASE: $base" >&2; exit 2; }
 skills/subagent-driven-development/scripts/review-package|git rev-parse --verify --quiet "$head" >/dev/null || { echo "bad HEAD: $head" >&2; exit 2; }
 skills/subagent-driven-development/scripts/review-package|out="$dir/review-$(git rev-parse --short "$base")..$(git rev-parse --short "$head").diff"
