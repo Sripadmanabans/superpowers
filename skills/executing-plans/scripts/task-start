@@ -5,10 +5,14 @@
 # cut from. One tool call instead of two, because every call in an inline
 # session is a turn that re-reads the whole context.
 #
+# This repository uses Jujutsu (jj). BASE is `@-`: the change below the
+# working copy, which is where finished work sits once `jj commit` has run
+# (`@` itself is the working copy and is empty at that point).
+#
 # Usage: task-start PLAN_FILE TASK_NUMBER
 # Prints:
 #   brief: <path to the task's brief file>
-#   base:  <full SHA of HEAD>
+#   base:  <full commit ID of @->
 set -euo pipefail
 
 if [ $# -ne 2 ]; then
@@ -25,4 +29,4 @@ brief=$(printf '%s\n' "$out" | sed -n 's/^wrote \(.*\): [0-9][0-9]* lines$/\1/p'
 [ -n "$brief" ] || { echo "task-brief did not report a path: $out" >&2; exit 1; }
 
 echo "brief: $brief"
-echo "base: $(git rev-parse HEAD)"
+echo "base: $(jj log --no-graph -r '@-' -T 'commit_id')"
