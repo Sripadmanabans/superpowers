@@ -146,9 +146,9 @@ PLAN
     # pipefail`, the ledger's `grep -v '^[[:space:]]*$' log | tail -n 1`
     # exits 1 on an empty/blank log, which used to abort the whole script
     # (silently, no ledger line) even though the test command itself passed.
-    ( cd "$repo" && echo y > work2.txt && git add work2.txt && git "${git_id[@]}" commit -qm "task 2" )
+    ( cd "$repo" && echo y > work2.txt && jj --quiet commit -m "task 2" )
     local head2
-    head2="$(cd "$repo" && git rev-parse HEAD)"
+    head2="$(cd "$repo" && jj log --no-graph -r '@-' -T 'commit_id')"
     rc=0
     out="$(cd "$repo" && "$EP_SCRIPTS/task-done" plan.md 2 "$head" -- true 2>&1)" || rc=$?
     if [[ "$rc" -eq 0 ]]; then

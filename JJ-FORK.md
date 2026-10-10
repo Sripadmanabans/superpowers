@@ -83,16 +83,21 @@ The check scans only runnable contexts — fenced shell blocks and shell scripts
 Prose that discusses git as the subject of a worked example is out of scope; see
 `tests/claude-code/jj-purity-allowlist.txt`.
 
+Tests are out of scope too, and upstream adds git-based fixtures there as well —
+v7.0.0's new regression tests in `test-executing-plans-scripts.sh` and
+`test-sdd-workspace.sh` merged clean and failed only when run. After a rebase,
+run the offline suites under `tests/claude-code/`, not just the purity check.
+
 ## Version scheme and picking up edits
 
-This fork versions as `<upstream-version>-jj.<n>` — `7.0.0-jj.1` sits on upstream
-v7.0.0. The suffix is not cosmetic: `claude plugin update` compares the version
+This fork versions as `<upstream-version>-jj.<n>` — `7.0.1-jj.1` sits on upstream
+v7.0.1. The suffix is not cosmetic: `claude plugin update` compares the version
 in `plugin.json` and skips re-copying when it is unchanged, so editing a skill
 has no effect on the installed copy until the version moves. Bump `-jj.<n>` when
 you want changes picked up, and reset it on a new upstream base.
 
 Claude Code compares versions by inequality rather than semver precedence, so
-the prerelease suffix updating "from 7.0.0 to 7.0.0-jj.1" is accepted even
+the prerelease suffix updating "from 7.0.1 to 7.0.1-jj.1" is accepted even
 though semver ranks a prerelease lower.
 
 ```bash

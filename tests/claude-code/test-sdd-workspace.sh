@@ -379,17 +379,19 @@ PLAN
     fi
 
     # --- A repo's own committed .superpowers/sdd/.gitignore is left alone ---
-    git init -q -b main "$TEST_ROOT/own-ignore"
+    mkdir -p "$TEST_ROOT/own-ignore"
+    jj --quiet git init "$TEST_ROOT/own-ignore"
     local own own_ignore
-    own="$(cd "$TEST_ROOT/own-ignore" && git rev-parse --show-toplevel)"
+    own="$(physical_path "$(cd "$TEST_ROOT/own-ignore" && jj root)")"
     own_ignore=$'*\n!.gitignore\n!*/\n!*/progress.md'
     mkdir -p "$own/.superpowers/sdd"
     printf '%s\n' "$own_ignore" > "$own/.superpowers/sdd/.gitignore"
     printf '# Plan\n\n## Task 1: One\n\nOne.\n' > "$own/plan.md"
-    (cd "$own" && git add -A && git -c user.name=t -c user.email=t@t commit -qm init)
+    # jj tracks new files automatically, so there is no staging step.
+    (cd "$own" && jj --quiet commit -m init)
     (cd "$own" && "$SDD_SCRIPTS/sdd-workspace" plan.md >/dev/null)
     if [[ "$(cat "$own/.superpowers/sdd/.gitignore")" == "$own_ignore" \
-        && -z "$(cd "$own" && git status --porcelain -- .superpowers/sdd/.gitignore)" ]]; then
+        && -z "$(cd "$own" && jj diff --name-only -- .superpowers/sdd/.gitignore)" ]]; then
         pass "an existing .superpowers/sdd/.gitignore is not overwritten"
     else
         fail "an existing .superpowers/sdd/.gitignore is not overwritten"
